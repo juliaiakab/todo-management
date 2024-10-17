@@ -1,0 +1,38 @@
+{
+  "xsappname": "todo-management-auth",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.consumer",
+      "description": "consumer"
+    },
+    {
+      "name": "$XSAPPNAME.creator",
+      "description": "creator"
+    },
+    {
+      "name": "$XSAPPNAME.jobscheduler",
+      "description": "Scope for Job Scheduler",
+      "grant-as-authority-to-apps": ["jobscheduler"]
+    }
+  ],
+  "attributes": [],
+  "role-templates": [
+    {
+      "name": "consumer",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.consumer"
+      ],
+      "attribute-references": []
+    },
+    {
+      "name": "creator",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.creator"
+      ],
+      "attribute-references": []
+    }
+  ]
+}

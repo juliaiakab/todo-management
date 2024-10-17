@@ -1,0 +1,5 @@
+ID,owner_ID,title,description,dueDate,status_code,createdAt,createdBy,modifiedAt,modifiedBy
+17e00347-dc7e-4ca9-9c5d-06ccef69f064,7676de41-8b78-43d5-a4a9-f15f9f1e8db8,Read Anna Karenina,You should read Anna Karenina by the end of the month,2024-10-09,P,2024-09-17,7676de41-8b78-43d5-a4a9-f15f9f1e8db8,2024-10-09,7676de41-8b78-43d5-a4a9-f15f9f1e8db8
+d8e797d9-6507-4aaa-b43f-5d2301df5135,7676de41-8b78-43d5-a4a9-f15f9f1e8db8,Buy Gift,Buy birthday gift for mom,2024-10-17,N,2024-09-17,7676de41-8b78-43d5-a4a9-f15f9f1e8db8,2024-10-09,7676de41-8b78-43d5-a4a9-f15f9f1e8db8
+ff13d2fa-e00f-4ee5-951c-3303f490777b,151f017a-ba04-412f-913e-128ef08a3cde,AWS certification,Finish the AWS training and learn for the exam,2024-12-31,P,2024-09-17,151f017a-ba04-412f-913e-128ef08a3cde,2024-10-09,151f017a-ba04-412f-913e-128ef08a3cde
+2b23bb4b-4ac7-4a24-ac02-aa10cabd842c,151f017a-ba04-412f-913e-128ef08a3cde,Buy groceries,"Buy carrots, tomatoes,onions and lettuce",2024-09-24,D,2024-09-17,151f017a-ba04-412f-913e-128ef08a3cde,2024-10-09,151f017a-ba04-412f-913e-128ef08a3cde

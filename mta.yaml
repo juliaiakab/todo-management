@@ -1,0 +1,188 @@
+_schema-version: 3.3.0
+ID: todo-management
+version: 1.0.0
+description: A simple CAP project.
+
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production # - mkdir -p resources
+
+# ------------------------- MODULES ----------------------------
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -      readiness-health-check-http-endpoint: /health readiness-health-check-type: http
+# --------------------------------------------------------------
+modules:
+  # -------------------- todo-management SERVICE --------------------
+  - name: todo-management-srv
+    type: nodejs
+    path: .
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 1024MB
+      disk-quota: 512M
+    build-parameters:
+      build-result: gen/srv
+    provides:
+      - name: todo-management-api
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: todo-management-auth
+      - name: todo-management-destination-service
+      - name: todo-management-db
+      - name: todo-management-job-scheduler 
+      - name: todo-management-notifications
+
+  # -------------------- WEBAPP CONTENT ------------------------
+  - name: todo-management-app-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: todo-management-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - artifacts:
+            - tmtodomanagement.zip
+          name: tmtodomanagement
+          target-path: resources/
+
+  # -------------------- HTML5 extensibility ---------------------
+  - name: tmtodomanagement
+    type: html5
+    path: app/todomanagement
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm i
+        - npm run build:cf
+      supported-platforms: []
+
+  # -------------------- DESTINATIONS --------------------------
+  - name: todo-management-destinations
+    type: com.sap.application.content
+    requires:
+      - name: todo-management-auth
+        parameters:
+          service-key:
+            name: todo-management-auth-key
+      - name: todo-management-repo-host
+        parameters:
+          service-key:
+            name: todo-management-repo-host-key
+      - name: todo-management-api
+        parameters:
+          content-target: true
+      - name: todo-management-destination-service
+        parameters:
+          content-target: true
+    parameters:
+      content:
+        instance:
+          existing_destinations_policy: update
+          destinations:
+            - Name: todo-management-repo-host
+              ServiceInstanceName: todo-management-repo-host
+              ServiceKeyName: todo-management-repo-host-key
+              sap.cloud.service: tasks
+            - Name: todo-management-auth
+              Authentication: OAuth2UserTokenExchange
+              ServiceInstanceName: todo-management-auth
+              ServiceKeyName: todo-management-auth-key
+              sap.cloud.service: tasks
+            - Name: todo-management-srv
+              Authentication: OAuth2UserTokenExchange
+              TokenServiceInstanceName: todo-management-auth
+              TokenServiceKeyName: todo-management-auth-key
+              URL: "~{todo-management-api/srv-url}"
+              sap.cloud.service: tasks
+    build-parameters:
+      no-source: true
+
+  # -------------------- DB DEPLOYER -------------------- 
+  - name: todo-management-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: todo-management-db
+
+# ------------------------- RESOURCES --------------------------
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# --------------------------------------------------------------
+resources:
+  # -------------------- DESTINATION SERVICE -------------------
+  - name: todo-management-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            destinations:
+              - Authentication: NoAuthentication
+                Name: ui5
+                ProxyType: Internet
+                Type: HTTP
+                URL: https://ui5.sap.com
+            existing_destinations_policy: update
+        version: 1.0.0
+      service: destination
+      service-name: todo-management-destination-service
+      service-plan: lite
+
+  # -------------------- AUTH ----------------------------------
+  - name: todo-management-auth
+    type: org.cloudfoundry.managed-service
+    properties:
+      XSAPPNAME: ${xsuaa-app}
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      xsuaa-app: todo-management-auth
+      config: 
+        xsappname: ${xsuaa-app}
+      # config:
+      #   xsappname: todo-management-${org}-${space}
+      #   tenant-mode: dedicated
+
+  # -------------------- REPO HOST -----------------------------
+  - name: todo-management-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+
+  # -------------------- SAP HANA CLOUD SERVICE ------------------
+  - name: todo-management-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+
+  # -------------------- JOB SCHEDULING SERVICE ------------------
+  - name: todo-management-job-scheduler
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: jobscheduler
+      service-plan: lite
+      config:
+          enable-xsuaa-support: true
+
+  # -------------------- ALERT NOTIFICATION ------------------
+  - name: todo-management-notifications
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: alert-notification
+      service-plan: standard
