@@ -15,6 +15,7 @@ service TodoManagementService {
   entity Tasks as projection on td.Tasks;
   entity Users as projection on td.Users;
   entity Status as projection on td.Status;
+  entity TasksToUsers as projection on td.TasksToUsers;
 
   action checkTasksDueInAWeek();
 }

@@ -151,8 +151,9 @@ resources:
       service-plan: application
       path: ./xs-security.json
       xsuaa-app: todo-management-auth
-      config: 
+      config:
         xsappname: ${xsuaa-app}
+        tenant-mode: dedicated
       # config:
       #   xsappname: todo-management-${org}-${space}
       #   tenant-mode: dedicated
@@ -178,7 +179,7 @@ resources:
       service: jobscheduler
       service-plan: lite
       config:
-          enable-xsuaa-support: true
+        enable-xsuaa-support: true
 
   # -------------------- ALERT NOTIFICATION ------------------
   - name: todo-management-notifications

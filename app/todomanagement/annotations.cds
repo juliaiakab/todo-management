@@ -33,6 +33,12 @@ annotate service.Tasks with @(
                     ID : 'Details',
                     Target : '@UI.FieldGroup#Details',
                 },
+                {
+                    $Type : 'UI.ReferenceFacet',
+                    Label : '{i18n>Assignees}',
+                    ID : 'i18nAssignees',
+                    Target : 'assignees/@UI.LineItem#i18nAssignees',
+                },
             ],
         },
     ],
@@ -190,5 +196,20 @@ annotate service.Status with @(
             },
         ],
     }
+);
+
+annotate service.TasksToUsers with @(
+    UI.LineItem #i18nAssignees : [
+        {
+            $Type : 'UI.DataField',
+            Value : assignee.name,
+            Label : '{i18n>Name}',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : assignee.email,
+            Label : '{i18n>Email}',
+        },
+    ]
 );
 

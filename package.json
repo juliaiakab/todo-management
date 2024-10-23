@@ -32,7 +32,7 @@
       "db": {
         "kind": "sqlite",
         "credentials": {
-          "url": "db/todo.sqlite"
+          "database": ":memory:"
         }
       },
       "[development]": {
@@ -42,7 +42,7 @@
             "admin@msg.group": {
               "password": "password",
               "roles": [
-                "admin"
+                "creator"
               ],
               "id": "151fb252-f503-40e4-8f7d-0287780af5d7",
               "attr": {
@@ -52,7 +52,7 @@
             "julia.iakab@msg.group": {
               "password": "password",
               "roles": [
-                "user"
+                "creator"
               ],
               "id": "7676de41-8b78-43d5-a4a9-f15f9f1e8db8",
               "attr": {
@@ -62,7 +62,7 @@
             "klara.pop@msg.group": {
               "password": "password",
               "roles": [
-                "user"
+                "consumer"
               ],
               "id": "151f017a-ba04-412f-913e-128ef08a3cde",
               "attr": {
