@@ -141,7 +141,8 @@
           "options": {
             "settings": {
               "editableHeaderContent": false,
-              "contextPath": "/Tasks"
+              "contextPath": "/Tasks",
+              "navigation": {}
             }
           }
         }

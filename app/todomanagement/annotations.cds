@@ -35,9 +35,9 @@ annotate service.Tasks with @(
                 },
                 {
                     $Type : 'UI.ReferenceFacet',
-                    Label : '{i18n>Assignees}',
-                    ID : 'i18nAssignees',
-                    Target : 'assignees/@UI.LineItem#i18nAssignees',
+                    Label : '{i18n>AssignedUsers}',
+                    ID : 'i18nAssignedUsers',
+                    Target : 'assignees/@UI.LineItem#i18nAssignedUsers',
                 },
             ],
         },
@@ -198,11 +198,12 @@ annotate service.Status with @(
     }
 );
 
+
 annotate service.TasksToUsers with @(
-    UI.LineItem #i18nAssignees : [
+    UI.LineItem #i18nAssignedUsers : [
         {
             $Type : 'UI.DataField',
-            Value : assignee.name,
+            Value : assignee_ID,
             Label : '{i18n>Name}',
         },
         {
@@ -212,4 +213,25 @@ annotate service.TasksToUsers with @(
         },
     ]
 );
+
+annotate service.TasksToUsers with {
+    assignee @(
+        Common.Text : {
+            $value : assignee.name,
+            ![@UI.TextArrangement] : #TextOnly
+        },
+        Common.ValueList : {
+            $Type : 'Common.ValueListType',
+            CollectionPath : 'Users',
+            Parameters : [
+                {
+                    $Type : 'Common.ValueListParameterInOut',
+                    LocalDataProperty : assignee_ID,
+                    ValueListProperty : 'ID',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues : true,
+    )
+};
 

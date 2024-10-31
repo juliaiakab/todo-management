@@ -7,7 +7,7 @@
   "private": true,
   "dependencies": {
     "@cap-js/hana": "^1",
-    "@cap-js/notifications": "^0.2.1",
+    "@cap-js/notifications": "^0.2.3",
     "@sap_oss/alert-notification-client": "^1.7.0",
     "@sap/cds": "^8",
     "@sap/xssec": "^4",
@@ -32,7 +32,7 @@
       "db": {
         "kind": "sqlite",
         "credentials": {
-          "database": ":memory:"
+          "url": "db/todo.sqlite"
         }
       },
       "[development]": {

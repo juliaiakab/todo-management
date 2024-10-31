@@ -1,27 +1,37 @@
 const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function() {
-    const { Tasks, Users, TasksToUsers } = this.entities;
+    const { Tasks, Users, TasksToUsers, Status } = this.entities;
 
-    this.on('READ', 'Tasks', async (req) => {
-        const userId = req.user.id;
-        const tasksAssignedToLoggedInUser = await SELECT('task_ID').from(TasksToUsers).where({ assignee_ID: userId });
-        const taskIds = tasksAssignedToLoggedInUser.map(row => row.task_ID);
-        if (taskIds.length > 0) {
-            const tasks = await SELECT.from(Tasks).where({ ID: taskIds });
-            console.log(tasks);
-
-            return tasks;
-        } else {
-            return [];
-        }
-        
-    });
+    // this.on('READ', 'Tasks', async (req) => {
+    //     const userId = req.user.id;
+    //     const taskId = req.params[0]?.ID;
+    //     console.log( taskId);
+    //     if (taskId) {
+    //         const task = await SELECT.one.from(Tasks).where({ ID: taskId });
+    //         task.status = await SELECT.one.from(Status).where({ code: task.status_code });
+    //         return task;
+    //     } else {
+    //         const tasksAssignedToLoggedInUser = await SELECT('task_ID').from(TasksToUsers).where({ assignee_ID: userId });
+    //         const taskIds = tasksAssignedToLoggedInUser.map(row => row.task_ID);
+    //         if (taskIds.length > 0) {
+    //             const tasks = await SELECT.from(Tasks).where({ ID: taskIds });
+    //             tasks.forEach(async t => {
+    //                 t.status = await SELECT.one.from(Status).where({ code: t.status_code });
+    //                 t.owner = await SELECT.one.from(Users).where({ ID: t.owner_ID });
+    //             })
+    //             console.log(tasks);
+    //             return tasks;
+    //         } else {
+    //             return [];
+    //         }
+    //    }
+    // });
 
     this.before(['CREATE', 'UPDATE'], Tasks, async (req) => {
         const userEmail = req.user.id; 
-        const user = await SELECT.one.from(Users).where({ ID: userEmail }); // local
-        // const user = await SELECT.one.from(Users).where({ email: userEmail }); // prod
+        // const user = await SELECT.one.from(Users).where({ email: userEmail }); // local
+        const user = await SELECT.one.from(Users).where({ email: userEmail }); // prod
         if (user) {
             req.data.owner_ID = user.ID;
         } else {
@@ -29,8 +39,8 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
-    this.after("READ", Tasks, (data) => {
-        const tasks = Array.isArray(data) ? data : [data];
+    this.after("READ", Tasks, async (data, req) => {
+        let tasks = Array.isArray(data) ? data : [data];
         tasks.forEach(async (task) => {
             if (task.status_code !== '') {
                 const dueDate = new Date(task.dueDate);
@@ -44,7 +54,9 @@ module.exports = cds.service.impl(async function() {
                 }
             }
         })
-    })
+        console.log(tasks);
+        return tasks;
+    });
 
      
     this.on('checkTasksDueInAWeek', async () => {
