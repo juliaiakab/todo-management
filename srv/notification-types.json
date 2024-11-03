@@ -1,0 +1,16 @@
+[
+    {
+      "NotificationTypeKey": "TaskIsDue",
+      "NotificationTypeVersion": "1",
+      "Templates": [
+        {
+          "Language": "en",
+          "TemplatePublic": "Task is Due",
+          "TemplateSensitive": "Task '{{title}}' Due",
+          "TemplateGrouped": "Task Update",
+          "TemplateLanguage": "mustache",
+          "Subtitle": "Incident from '{{customer}}' resolved by {{user}}."
+        }
+      ]
+    }
+  ]
