@@ -1,4 +1,12 @@
 const cds = require('@sap/cds');
+const { getDestination, executeHttpRequest, buildCsrfHeaders } = require("@sap-cloud-sdk/core");
+
+const NOTIF_TYPE_KEY = "TaskIsDue";
+const NOTIF_TYPE_VERSION = "1.0";
+const destinationName = "SAP_Notifications";
+const notificationEndpoint = "v2/Notification.svc";
+const notificationTypesEndpoint = "v2/NotificationType.svc";
+
 
 module.exports = cds.service.impl(async function() {
     const { Tasks, Users, TasksToUsers, Status } = this.entities;
@@ -28,69 +36,133 @@ module.exports = cds.service.impl(async function() {
     // //    }
     // // });
 
-    // this.before(['CREATE', 'UPDATE'], Tasks, async (req) => {
-    //     const userEmail = req.user.id; 
-    //     const user = await SELECT.one.from(Users).where({ ID: userEmail }); // local
-    //     // const user = await SELECT.one.from(Users).where({ email: userEmail }); // prod
-    //     if (user) {
-    //         req.data.owner_ID = user.ID;
-    //         console.log(userEmail);
-    //         console.log('---------------------------------------');
-    //     //    await sendNotification(userEmail, { title: 'title'} )
-    //     } else {
-    //         req.reject(403, `User ${userEmail} not found in the system.`);
-    //     }
-    // });
-
-    // this.after("READ", Tasks, async (data, req) => {
-    //     let tasks = Array.isArray(data) ? data : [data];
-    //     tasks.forEach(async (task) => {
-    //         if (task.status_code !== '') {
-    //             const dueDate = new Date(task.dueDate);
-    //             const currentDate = new Date();
-
-    //             const difference = dueDate - currentDate;
-    //             const daysDifference = difference / (1000 * 60 * 60 * 24);
-
-    //             if (daysDifference < 7 && task.status_code !== 'D') {
-    //                 task.title += ' - Hurry up, date is due!';
-    //             }
-    //         }
-    //     })
-    //     console.log(tasks);
-    //     return tasks;
-    // });
-
+    this.before(['CREATE'], Tasks, async (req) => {
+        const currentUser = req.user.id; 
+        //const user = await SELECT.one.from(Users).where({ ID: currentUser }); // local
+        const user = await SELECT.one.from(Users).where({ email: currentUser }); // prod
+        if (user) {
+            req.data.owner_ID = user.ID;
+        } else {
+            req.reject(403, `User ${currentUser} not found in the system.`);
+        }
+    });
      
-    // this.on('checkTasksDueInAWeek', async () => {
+    this.on('checkTasksDueInAWeek', async () => {
+        const today = new Date();
+        const oneWeekFromToday = new Date();
+        oneWeekFromToday.setDate(today.getDate() + 7);
 
-    //     const today = new Date();
-    //     const oneWeekFromToday = new Date();
-    //     oneWeekFromToday.setDate(today.getDate() + 7);
+        const tasksDueInAWeek = await SELECT.from(Tasks).where({ dueDate: oneWeekFromToday });
 
-    //     const tasksDueInAWeek = await SELECT.from(Tasks).where({ dueDate: oneWeekFromToday });
-
-    //     if (tasksDueInAWeek.length) {
-    //     tasksDueInAWeek.forEach(async task => {
-    //       //  await sendNotification(task.owner_ID, task);
-    //     });
-    //     }
-    // });
+        if (tasksDueInAWeek.length) {
+        tasksDueInAWeek.forEach(async task => {
+            console.log('task is due!!');
+            await sendNotification(task.owner_ID, task.title);
+        });
+        }
+    });
 
 
-    // async function sendNotification(owner, task) {
-    //     // console.log('sending notification');
-    //     // const alert = await cds.connect.to('notifications');
-    //     // try {
-    //     //     const result = await alert.notify({
-    //     //         recipients: [owner],
-    //     //         priority: "HIGH",
-    //     //         title: "Your task is due!",
-    //     //         description: `Your task, titled ${task.title}, is due in a week.`
-    //     //     });
-    //     //     console.log('Notification sent successfully:', result);
-    //     // } catch (error) {
-    //     //     console.error('Notification failed:', error);
-    //     // }
-    // }
+    async function sendNotification(owner, title) {
+        console.log('task is ----------------------');
+        console.log(title);
+        console.log(owner);
+        try {
+            const ownerNew = await SELECT.one.from(Users).where({ ID: owner });
+            await publishTaskDueNotification({ title: title, recipients: [ ownerNew.email ]})
+        } catch (e) {
+            if (e.response) {
+                console.error(`${e.response.statusText} (${e.response.status}): ${JSON.stringify(e.response.data.error.message)}.`)
+            } else {
+                console.error(e)
+            }
+        }
+    }
+
+    async function getNotificationTypes() {
+        const notifServiceDest = await getDestination(destinationName);
+        const response = await executeHttpRequest(notifServiceDest, {
+            url: `${notificationTypesEndpoint}/NotificationTypes`,
+            method: "get"
+        });
+        return response.data.d.results;
+    }
+
+    async function postNotificationType(notificationType) {
+        const notifServiceDest = await getDestination(destinationName);
+        const csrfHeaders = await buildCsrfHeaders(notifServiceDest, { url: notificationTypesEndpoint });
+        const response = await executeHttpRequest(notifServiceDest, {
+            url: `${notificationTypesEndpoint}/NotificationTypes`,
+            method: "post",
+            data: notificationType,
+            headers: csrfHeaders,
+        });
+        return response.data.d;
+    }
+
+    async function postNotification(notification) {
+        const notifServiceDest = await getDestination(destinationName);
+        const csrfHeaders = await buildCsrfHeaders(notifServiceDest, { url: notificationEndpoint });
+        const response = await executeHttpRequest(notifServiceDest, {
+            url: `${notificationEndpoint}/Notifications`,
+            method: "post",
+            data: notification,
+            headers: csrfHeaders,
+        });
+        return response.data.d;
+    }
+
+    function createNotificationType() {
+        return {
+            NotificationTypeKey: NOTIF_TYPE_KEY,
+            NotificationTypeVersion: NOTIF_TYPE_VERSION,
+            Templates: [
+                {
+                    Language: "en",
+                    TemplatePublic: "Task is Due",
+                    TemplateSensitive: "Task '{{title}}' Due",
+                    TemplateGrouped: "Task Update",
+                    TemplateLanguage: "mustache",
+                    Subtitle: "Your task with the title '{{title}}' is due in a week."
+                }
+            ]
+        }
+    }
+
+    function createNotification({ title, recipients }) {
+        return {
+            OriginId: "task-is-due-warning",
+            NotificationTypeKey: NOTIF_TYPE_KEY,
+            NotificationTypeVersion: NOTIF_TYPE_VERSION,
+            NavigationTargetAction: "display",
+            NavigationTargetObject: "masterDetail",
+            Priority: "Medium",
+            ProviderId: "",
+            ActorId: "",
+            ActorType: "",
+            ActorDisplayText: "",
+            ActorImageURL: "",
+            Properties: [
+                {
+                    Key: "title",
+                    Language: "en",
+                    Value: title,
+                    Type: "String",
+                    IsSensitive: false
+                }
+            ],
+            Recipients: recipients.map(recipient => ({ RecipientId: recipient })),
+        }
+    }
+
+    async function publishTaskDueNotification(notification) {
+        const notifTypes = await getNotificationTypes();
+        const notifType = notifTypes.find(nType => nType.NotificationTypeKey === NOTIF_TYPE_KEY && nType.NotificationTypeVersion === NOTIF_TYPE_VERSION);
+        if (!notifType) {
+            console.log(`Notification Type of key ${NOTIF_TYPE_KEY} and version ${NOTIF_TYPE_VERSION} was not found. Creating it...`);
+            await postNotificationType(createNotificationType());
+        }
+        return await postNotification(createNotification(notification));
+    }
+
 })
