@@ -1,5 +1,6 @@
 const cds = require('@sap/cds');
 const { getDestination, executeHttpRequest, buildCsrfHeaders } = require("@sap-cloud-sdk/core");
+const { SELECT } = require('@sap/cds/lib/ql/cds-ql');
 
 const NOTIF_TYPE_KEY = "TaskIsDue";
 const NOTIF_TYPE_VERSION = "1.0";
@@ -56,20 +57,18 @@ module.exports = cds.service.impl(async function() {
 
         if (tasksDueInAWeek.length) {
         tasksDueInAWeek.forEach(async task => {
-            console.log('task is due!!');
-            await sendNotification(task.owner_ID, task.title);
+            const usersAssignedToTask = (await SELECT('assignee_ID').from(TasksToUsers).where({ task_ID: task.ID})).map(ttu => ttu.assignee_ID);
+            const userEmails = (await SELECT.from(Users).columns('email').where({ ID: { in: usersAssignedToTask }})).map(user => user.email);
+            await sendNotification(userEmails, task.title);
         });
         }
     });
 
 
-    async function sendNotification(owner, title) {
-        console.log('task is ----------------------');
-        console.log(title);
-        console.log(owner);
+    async function sendNotification(assigneEmails, title) {
+        console.log('in send notification');
         try {
-            const ownerNew = await SELECT.one.from(Users).where({ ID: owner });
-            await publishTaskDueNotification({ title: title, recipients: [ ownerNew.email ]})
+            await publishTaskDueNotification({ title: title, recipients: assigneEmails })
         } catch (e) {
             if (e.response) {
                 console.error(`${e.response.statusText} (${e.response.status}): ${JSON.stringify(e.response.data.error.message)}.`)
@@ -79,6 +78,16 @@ module.exports = cds.service.impl(async function() {
         }
     }
 
+    async function publishTaskDueNotification(notification) {
+        const notifTypes = await getNotificationTypes();
+        const notifType = notifTypes.find(nType => nType.NotificationTypeKey === NOTIF_TYPE_KEY && nType.NotificationTypeVersion === NOTIF_TYPE_VERSION);
+        if (!notifType) {
+            console.log(`Notification Type of key ${NOTIF_TYPE_KEY} and version ${NOTIF_TYPE_VERSION} was not found. Creating it...`);
+            await postNotificationType(createNotificationType());
+        }
+        return await postNotification(createNotification(notification));
+    }
+    
     async function getNotificationTypes() {
         const notifServiceDest = await getDestination(destinationName);
         const response = await executeHttpRequest(notifServiceDest, {
@@ -154,15 +163,4 @@ module.exports = cds.service.impl(async function() {
             Recipients: recipients.map(recipient => ({ RecipientId: recipient })),
         }
     }
-
-    async function publishTaskDueNotification(notification) {
-        const notifTypes = await getNotificationTypes();
-        const notifType = notifTypes.find(nType => nType.NotificationTypeKey === NOTIF_TYPE_KEY && nType.NotificationTypeVersion === NOTIF_TYPE_VERSION);
-        if (!notifType) {
-            console.log(`Notification Type of key ${NOTIF_TYPE_KEY} and version ${NOTIF_TYPE_VERSION} was not found. Creating it...`);
-            await postNotificationType(createNotificationType());
-        }
-        return await postNotification(createNotification(notification));
-    }
-
 })
