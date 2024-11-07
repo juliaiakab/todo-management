@@ -11,31 +11,13 @@ const notificationTypesEndpoint = "v2/NotificationType.svc";
 
 module.exports = cds.service.impl(async function() {
     const { Tasks, Users, TasksToUsers, Status } = this.entities;
-
-    // // this.on('READ', 'Tasks', async (req) => {
-    // //     const userId = req.user.id;
-    // //     const taskId = req.params[0]?.ID;
-    // //     console.log( taskId);
-    // //     if (taskId) {
-    // //         const task = await SELECT.one.from(Tasks).where({ ID: taskId });
-    // //         task.status = await SELECT.one.from(Status).where({ code: task.status_code });
-    // //         return task;
-    // //     } else {
-    // //         const tasksAssignedToLoggedInUser = await SELECT('task_ID').from(TasksToUsers).where({ assignee_ID: userId });
-    // //         const taskIds = tasksAssignedToLoggedInUser.map(row => row.task_ID);
-    // //         if (taskIds.length > 0) {
-    // //             const tasks = await SELECT.from(Tasks).where({ ID: taskIds });
-    // //             tasks.forEach(async t => {
-    // //                 t.status = await SELECT.one.from(Status).where({ code: t.status_code });
-    // //                 t.owner = await SELECT.one.from(Users).where({ ID: t.owner_ID });
-    // //             })
-    // //             console.log(tasks);
-    // //             return tasks;
-    // //         } else {
-    // //             return [];
-    // //         }
-    // //    }
-    // // });
+   
+    this.before('READ', 'Tasks', async (req) => {
+        const userEmail = req.user.id; // Gets the current user’s ID
+        const userId = (await SELECT.one.from(Users).where({ email: userEmail })).ID;
+        console.log('current user is: ' + userEmail);
+        req.query.where(`ID in (SELECT task_ID FROM ${TasksToUsers.name} WHERE assignee_ID = '${userId}') OR owner_ID = '${userId}'`);
+    });
 
     this.before(['CREATE'], Tasks, async (req) => {
         const currentUser = req.user.id; 
